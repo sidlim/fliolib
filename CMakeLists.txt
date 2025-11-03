@@ -127,6 +127,39 @@ if(UNIX)
   target_link_libraries(test-many m)
 endif(UNIX)
 
+# Python build configuration
+set(PY_SRC_DIR "${CMAKE_SOURCE_DIR}/src/main/python")
+set(PY_BUILD_DIR "${CMAKE_BINARY_DIR}/python")
+
+message(STATUS "Python source: ${PY_SRC_DIR}")
+message(STATUS "Python build output: ${PY_BUILD_DIR}")
+
+add_custom_target(sync_python
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PY_BUILD_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${PY_SRC_DIR}"
+            "${PY_BUILD_DIR}"
+    COMMENT "Synchronizing Python sources into build directory"
+)
+
+add_custom_command(
+    TARGET flimlib POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PY_BUILD_DIR}/flimlib"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${PY_SRC_DIR}"
+            "${PY_BUILD_DIR}"
+    COMMENT "Prepared editable Python package"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "$<TARGET_FILE:flimlib>"
+            "${PY_BUILD_DIR}/flimlib/$<TARGET_FILE_NAME:flimlib>"
+    COMMENT "Copied Python package and linked C library"
+)
+
+add_dependencies(flimlib sync_python)
+
+
+# Java build code:
+
 if (BUILD_JAVA)
   # Setup swig to build a java lib
   set(CMAKE_SWIG_FLAGS -package flimlib)
