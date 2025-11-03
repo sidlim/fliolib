@@ -1,5 +1,5 @@
 # FLIOLib
-FLIOLib is a fork of FLIMLib, intended for use with Fluorescence Lifetime Imaging Ophthalmoscopy (FLIO) data. In FLIO, due to anatomic and machine-to-machine differences, the IRF delay per instance can change, which can alter the fit lifetimes if not accounted for. FLIOLib is meant to account for small differences in IRF delay.
+FLIOLib is a fork of FLIMLib, intended for use with Fluorescence Lifetime Imaging Ophthalmoscopy (FLIO) data. In FLIO, due to anatomic and machine-to-machine differences, the IRF delay per instance can change, which can alter the fit lifetimes if not accounted for. Because the IRF is difficult to measure in FLIO, the delay parameter needs to be fit, which is the purpose of this fork.
 
 This modification to the FLIMLib library has a new fitfunc, `GCI_incomplete_multiexp_tau` which provides a way to fit a function of the form \
 $$Y(x) = H(x)\sum_{i=1}^{k}a_ie^{-\frac{x-t_0}{\tau_i}}$$\
