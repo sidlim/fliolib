@@ -1,3 +1,14 @@
+# FLIOLib
+FLIOLib is a fork of FLIMLib, intended for use with Fluorescence Lifetime Imaging Ophthalmoscopy (FLIO) data. In FLIO, due to anatomic and machine-to-machine differences, the IRF delay per instance can change, which can alter the fit lifetimes if not accounted for. FLIOLib is meant to account for small differences in IRF delay.
+
+This modification to the FLIMLib library has a new fitfunc, `GCI_incomplete_multiexp_tau` which provides a way to fit a function of the form \
+$$Y(x) = H(x)\sum_{i=1}^{k}a_ie^{-\frac{x-t_0}{\tau_i}}$$\
+where $H$ is the Heaviside step function with its step at $t_0$. In order to keep the Jacobian finite everywhere, $H$ is approximated by a logistic function \
+$$S(x)=\frac{1}{1+e^{-\frac{x-t_0}{k}}}$$\
+This approximation allows the library to optimize the position of the step. The steepness of the step, $k$, is currently not modified by the library.
+
+`GCI_incomplete_multiexp_tau` takes an array of params in the following order: `[k, t_0, a_1, tau_1, ...]`. This fit is generally less stable and far more sensitive to seed conditions than the one provided by `GCI_multiexp_tau`. I believe this happens because $\frac{\partial Y}{\partial t_0}$ is disproportionately large around the location of the step. I'm still exploring how to fix this - perhaps this overall approach is doomed due to the instability.
+
 # FLIMLib
 [![](https://github.com/flimlib/flimlib/actions/workflows/build.yml/badge.svg)](https://github.com/flimlib/flimlib/actions/workflows/build.yml)
 [![](https://github.com/flimlib/flimlib/actions/workflows/build-python.yml/badge.svg)](https://github.com/flimlib/flimlib/actions/workflows/build-python.yml)
