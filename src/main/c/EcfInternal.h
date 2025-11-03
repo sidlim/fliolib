@@ -96,7 +96,15 @@ int multiexp_lambda_array(float xincr, float param[],
 						  float *y, float **dy_dparam, int nx, int nparam);
 void GCI_multiexp_tau(float x, float param[],
 					  float *y, float dy_dparam[], int nparam);
+void GCI_multiexp_tau_2(float x, float param[],
+					  float *y, float dy_dparam[], int nparam);
+void GCI_incomplete_multiexp_tau(float x, float param[],
+					  float *y, float dy_dparam[], int nparam);
 int multiexp_tau_array(float xincr, float param[],
+					   float *y, float **dy_dparam, int nx, int nparam);
+int multiexp_tau_array_2(float xincr, float param[],
+					   float *y, float **dy_dparam, int nx, int nparam);
+int incomplete_multiexp_tau_array(float xincr, float param[],
 					   float *y, float **dy_dparam, int nx, int nparam);
 void GCI_stretchedexp(float x, float param[],
 					  float *y, float dy_dparam[], int nparam);

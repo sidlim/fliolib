@@ -32,13 +32,16 @@ folder = os.path.dirname(os.path.abspath(__file__))
 dll_candidates = glob.glob(os.path.join(folder, "_flimlib.*.pyd")) + glob.glob(
     os.path.join(folder, "_flimlib.*.so")
 )
-if len(dll_candidates) > 1:
-    raise RuntimeError("More than one flimlib extension found???")
-if not dll_candidates:
-    raise RuntimeError("flimlib extension missing")
-dll_path = dll_candidates[0]
+#if len(dll_candidates) > 1:
+#    raise RuntimeError("More than one flimlib extension found???")
+#if not dll_candidates:
+#    raise RuntimeError("flimlib extension missing")
+#dll_path = dll_candidates[0]
 
 # 0x8 = LOAD_WITH_ALTERED_SEARCH_PATH, allowing absolute path loading
+
+dll_path = os.path.join(folder, 'libflimlib.so')
+
 _flimlib = ctypes.CDLL(dll_path, winmode=0x8)
 
 # Noise types used by flimlib
@@ -125,12 +128,19 @@ def _multiexp_predicate(n_param):
     return n_param >= 3 and n_param % 2 == 1
 
 
+def _incomplete_multiexp_predicate(n_param):
+    # 3 or greater and odd
+    return n_param >= 4 and n_param % 2 == 0
+
 def _stretchedexp_predicate(n_param):
     return n_param == 4
 
 
 GCI_multiexp_tau = FitFunc(
     _flimlib.GCI_multiexp_tau, nparam_predicate=_multiexp_predicate
+)
+GCI_incomplete_multiexp_tau = FitFunc(
+    _flimlib.GCI_incomplete_multiexp_tau, nparam_predicate=_incomplete_multiexp_predicate
 )
 GCI_multiexp_lambda = FitFunc(
     _flimlib.GCI_multiexp_lambda, nparam_predicate=_multiexp_predicate

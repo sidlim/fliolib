@@ -6,6 +6,8 @@ cmake_minimum_required(VERSION 3.5)
 
 project(flimlib)
 
+option(BUILD_JAVA "Build Java/SWIG bindings" ON)
+
 # CXX Build options
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -125,73 +127,76 @@ if(UNIX)
   target_link_libraries(test-many m)
 endif(UNIX)
 
-# Setup swig to build a java lib
-set(CMAKE_SWIG_FLAGS -package flimlib)
-# simply to avoid warnings, see https://github.com/CCPPETMR/SIRF/issues/242
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13.5")
-  # policy introduced in CMake 3.13
-  cmake_policy(SET CMP0086 NEW)
-  cmake_policy(SET CMP0078 NEW)
+if (BUILD_JAVA)
+  # Setup swig to build a java lib
+  set(CMAKE_SWIG_FLAGS -package flimlib)
+  # simply to avoid warnings, see https://github.com/CCPPETMR/SIRF/issues/242
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13.5")
+    # policy introduced in CMake 3.13
+    cmake_policy(SET CMP0086 NEW)
+    cmake_policy(SET CMP0078 NEW)
+  endif()
+
+
+  find_package(SWIG REQUIRED)
+  find_package(Java REQUIRED)
+  find_package(JNI REQUIRED)
+  include(UseJava)
+  include(UseSWIG)
+  include_directories(${JNI_INCLUDE_DIRS})
+
+  # direcotries where the generated java classes and c wrapper are kept
+  set( CMAKE_SWIG_OUTDIR ${PROJECT_SOURCE_DIR}/target/generated-sources/main/java/flimlib )
+  file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
+  set(SWIG_OUTFILE_DIR ${PROJECT_SOURCE_DIR}/target/generated-sources/main/cpp)
+  file(MAKE_DIRECTORY ${SWIG_OUTFILE_DIR})
+
+  # Build the C code into a dynamic library
+  set_property(SOURCE src/main/swig/FLIMLib.i PROPERTY CPLUSPLUS ON)
+  swig_add_library(
+      flimlib-jni 
+      TYPE SHARED
+      LANGUAGE java
+      SOURCES 
+      	src/main/swig/FLIMLib.i
+  )
+  swig_link_libraries(
+  	flimlib-jni
+  	flimlib
+  )
+
+  # Detect target bitness and architecture
+  set( TARGET_NATIVE ${PROJECT_SOURCE_DIR}/target/natives )
+  math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
+  set(OUT_DIR_W_BITS ${TARGET_NATIVE}) # /x${BITS} )
+  file(MAKE_DIRECTORY ${OUT_DIR_W_BITS})
+
+  if(WIN32)
+    set(TARGET_LIB_PREFIX "")
+  else()
+    set(TARGET_LIB_PREFIX "lib")
+  endif()
+  # RUNTIME_ for dll output and LIBRARY_ for .so/.dylib/.jnilib output
+  # _DEBUG _RELEASE are for MSVC in particular
+  set_target_properties(
+      flimlib
+      PROPERTIES
+          PREFIX                              "${TARGET_LIB_PREFIX}"
+          RUNTIME_OUTPUT_DIRECTORY            "${OUT_DIR_W_BITS}"
+          RUNTIME_OUTPUT_DIRECTORY_DEBUG      "${OUT_DIR_W_BITS}"
+          RUNTIME_OUTPUT_DIRECTORY_RELEASE    "${OUT_DIR_W_BITS}"
+          LIBRARY_OUTPUT_DIRECTORY            "${OUT_DIR_W_BITS}"
+  )
+  set_target_properties(
+      flimlib-jni
+      PROPERTIES
+          PREFIX                              "${TARGET_LIB_PREFIX}"
+          RUNTIME_OUTPUT_DIRECTORY            "${OUT_DIR_W_BITS}"
+          RUNTIME_OUTPUT_DIRECTORY_DEBUG      "${OUT_DIR_W_BITS}"
+          RUNTIME_OUTPUT_DIRECTORY_RELEASE    "${OUT_DIR_W_BITS}"
+          LIBRARY_OUTPUT_DIRECTORY            "${OUT_DIR_W_BITS}"
+  )
 endif()
-
-find_package(SWIG REQUIRED)
-find_package(Java REQUIRED)
-find_package(JNI REQUIRED)
-include(UseJava)
-include(UseSWIG)
-include_directories(${JNI_INCLUDE_DIRS})
-
-# direcotries where the generated java classes and c wrapper are kept
-set( CMAKE_SWIG_OUTDIR ${PROJECT_SOURCE_DIR}/target/generated-sources/main/java/flimlib )
-file(MAKE_DIRECTORY ${CMAKE_SWIG_OUTDIR})
-set(SWIG_OUTFILE_DIR ${PROJECT_SOURCE_DIR}/target/generated-sources/main/cpp)
-file(MAKE_DIRECTORY ${SWIG_OUTFILE_DIR})
-
-# Build the C code into a dynamic library
-set_property(SOURCE src/main/swig/FLIMLib.i PROPERTY CPLUSPLUS ON)
-swig_add_library(
-    flimlib-jni 
-    TYPE SHARED
-    LANGUAGE java
-    SOURCES 
-    	src/main/swig/FLIMLib.i
-)
-swig_link_libraries(
-	flimlib-jni
-	flimlib
-)
-
-# Detect target bitness and architecture
-set( TARGET_NATIVE ${PROJECT_SOURCE_DIR}/target/natives )
-math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
-set(OUT_DIR_W_BITS ${TARGET_NATIVE}) # /x${BITS} )
-file(MAKE_DIRECTORY ${OUT_DIR_W_BITS})
-
-if(WIN32)
-  set(TARGET_LIB_PREFIX "")
-else()
-  set(TARGET_LIB_PREFIX "lib")
-endif()
-# RUNTIME_ for dll output and LIBRARY_ for .so/.dylib/.jnilib output
-# _DEBUG _RELEASE are for MSVC in particular
-set_target_properties(
-    flimlib
-    PROPERTIES
-        PREFIX                              "${TARGET_LIB_PREFIX}"
-        RUNTIME_OUTPUT_DIRECTORY            "${OUT_DIR_W_BITS}"
-        RUNTIME_OUTPUT_DIRECTORY_DEBUG      "${OUT_DIR_W_BITS}"
-        RUNTIME_OUTPUT_DIRECTORY_RELEASE    "${OUT_DIR_W_BITS}"
-        LIBRARY_OUTPUT_DIRECTORY            "${OUT_DIR_W_BITS}"
-)
-set_target_properties(
-    flimlib-jni
-    PROPERTIES
-        PREFIX                              "${TARGET_LIB_PREFIX}"
-        RUNTIME_OUTPUT_DIRECTORY            "${OUT_DIR_W_BITS}"
-        RUNTIME_OUTPUT_DIRECTORY_DEBUG      "${OUT_DIR_W_BITS}"
-        RUNTIME_OUTPUT_DIRECTORY_RELEASE    "${OUT_DIR_W_BITS}"
-        LIBRARY_OUTPUT_DIRECTORY            "${OUT_DIR_W_BITS}"
-)
 
 ######################debug utility: print all properties######################
 # # Get all propreties that cmake supports (for debug purposes)

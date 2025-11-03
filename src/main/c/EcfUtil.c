@@ -617,6 +617,110 @@ int multiexp_lambda_array(float xincr, float param[],
 	return 0;
 }
 
+// Helper function to calculate the logistic function.
+// Useful because f' = f * (1-f), so this is a simple
+// differentiable approximation to the heaviside step 
+// function.
+float logistic(float x) {
+	return(1.0 / (1.0 + expf(-x)));
+}
+
+
+/** This one produces INCOMPLETE multiexponentials using taus:
+
+      y(x) = H((x-param[1])/param[0]) * (param[2]*exp(-x/param[3]) +
+               param[4]*exp(-x/param[5]) + ...)
+
+	where H(x) is a differentiable approximation to the Heaviside
+	step function. This is necessary because the Heaviside step
+	function is not differentiable at x = 0, which will present
+	issues for the LMA fit process, which relies on the Jacobian.
+
+   IMPORTANT NOTE: we do not ignore the param[0] term. Instead
+   we let it be the time scale parameter for the logistic step.
+   This is fine to do because it was being discarded anyways.
+   However, you do need to pass in a nonzero value. No gradients
+   are computed for this value, so I do not expect it to contribute
+   to numerical instability.
+*/
+
+void GCI_incomplete_multiexp_tau(float x, float param[],
+					  float *y, float dy_dparam[], int nparam)
+{
+	int i;
+	float ex, xa;
+	// We need to time shift x:
+	float x_shift = x - param[1];
+	// Now let's set up machinery for computing the step function:
+	// We will have to pick step_t_scale to have a rising edge that
+	// "works" - the rising edge needs to span a few frames, but not
+	// just one or not too many. This is something to experiment with.
+	float step_t_scale = param[0];
+	float step_func_value = logistic(x_shift / step_t_scale);
+	float dlog_step_dt0 = - (1.0 - step_func_value) / step_t_scale;
+
+	// zero-initialize dy_dparam[1], which is the derivative of y wrt t0:
+	// also the case for dy_dparam[0], which should not be optimized.
+	dy_dparam[0] = 0.0;
+	dy_dparam[1] = 0.0;
+
+	*y = 0.0;
+	// Param[0] is background count. param[1] should hold t0, the fit start
+	// then we should start this loop at param[2]. Since the step function
+	// doesn't depend on any of the params 2 through nparam - 1, we can just
+	// treat it like a constant to scale the derivatives by:
+	for (i=2; i<nparam-1; i+=2) {
+		xa = (x_shift) / param[i+1];
+		dy_dparam[i] = ex = step_func_value * expf(-xa);
+		ex *= param[i];
+		*y += ex;
+		dy_dparam[i+1] = ex * xa / param[i+1];
+		dy_dparam[1] += ex / param[i+1] + ex * dlog_step_dt0;
+	}
+}
+
+int incomplete_multiexp_tau_array(float xincr, float param[],
+					   float *y, float **dy_dparam, int nx, int nparam)
+{
+	int i, j;
+	float ex;
+	float a2[MAXFIT];       /* 1/(param[j]*param[j]) for taus */
+	double exincr[MAXFIT];  /* exp(-xincr/tau) */
+	double excur[MAXFIT];   /* exp(-x/tau)     */
+	float step_t_scale = param[0];
+
+	if (xincr <= 0) return -1;
+
+	for (j=2; j<nparam-1; j+=2) {
+		if (param[j+1] < 0) return -1;
+		excur[j] = exp((double) param[1] / (double) param[j+1]);
+		exincr[j] = exp(-xincr / (double) param[j+1]);
+		a2[j] = 1 / (param[j+1] * param[j+1]);
+	}
+
+	for (i=0; i<nx; i++) {
+		y[i] = 0;
+		float x_shifted = (float) i * xincr - param[1];
+		float step_func_value = logistic((x_shifted) / step_t_scale);
+		float dlog_step_t0 = - (1.0 - step_func_value) / step_t_scale;
+
+		dy_dparam[i][0] = 0.0;
+		dy_dparam[i][1] = 0.0;
+		for (j=2; j<nparam-1; j+=2) {
+			dy_dparam[i][j] = ex = (float) excur[j] * step_func_value;
+			ex *= param[j];
+			y[i] += ex;
+			dy_dparam[i][j+1] = ex * x_shifted * a2[j];
+			dy_dparam[i][1] += ex / param[j+1] + ex * dlog_step_t0;
+			/* And ready for next loop... */
+			excur[j] *= exincr[j];
+		}
+	}
+
+	return 0;
+}
+
+
 
 /** This one produces multiexponentials using taus:
 
@@ -670,6 +774,85 @@ int multiexp_tau_array(float xincr, float param[],
 		a2[j] = 1 / (param[j+1] * param[j+1]);
 	}
 
+	for (i=0; i<nx; i++) {
+		y[i] = 0;
+		for (j=1; j<nparam-1; j+=2) {
+			dy_dparam[i][j] = ex = (float) excur[j];
+			ex *= param[j];
+			y[i] += ex;
+			dy_dparam[i][j+1] = ex * xincr * (float) i * a2[j];
+			/* And ready for next loop... */
+			excur[j] *= exincr[j];
+		}
+	}
+
+	return 0;
+}
+
+
+/** This one produces multiexponentials using taus:
+
+      y(x) = param[0] + param[1]*exp(-x/param[2]) +
+               param[3]*exp(-x/param[4]) + ...
+
+   This gives:
+
+      dy/dparam_0 = 1
+      dy/dparam_1 = exp(-x/param[2])
+      dy/dparam_2 = param[1]*x*exp(-x/param[2]) / param[2]^2
+
+   and similarly for dy/dparam_3 and dy/dparam_4, etc.
+
+   Again, we ignore the param[0] term.
+
+   ADDITIONALLY, we are computing this inefficiently to see how much longer
+   the optimization takes than GCI_multiexp_tau
+*/
+
+void GCI_multiexp_tau_2(float x, float param[],
+					  float *y, float dy_dparam[], int nparam)
+{
+	int i;
+	float ex, xa;
+
+	*y = 0;
+
+	for (i=1; i<nparam-1; i+=2) {
+		//xa = x / param[i+1];
+		//dy_dparam[i] = ex = expf(-xa);
+		//ex *= param[i];
+		//*y += ex;
+		//dy_dparam[i+1] = ex * xa / param[i+1];
+		*y += param[i] * expf(-x / param[i + 1]);
+		dy_dparam[i] = expf(-x / param[i + 1]);
+		dy_dparam[i + 1] = param[i] * expf(-x / param[i + 1]) / (param[i + 1] * param[i + 1]);
+	}
+}
+
+// TODO: implement the array version
+int multiexp_tau_array_2(float xincr, float param[],
+					   float *y, float **dy_dparam, int nx, int nparam)
+{
+	int i, j;
+	float ex;
+	float a2[MAXFIT];       /* 1/(param[j]*param[j]) for taus */
+	double exincr[MAXFIT];  /* exp(-xincr/tau) */
+	double excur[MAXFIT];   /* exp(-x/tau)     */
+
+	if (xincr <= 0) return -1;
+
+	// Setup the equivalent of local variables for the different
+	// lifetime components a_j and tau_j. These will be used
+	// just like locals, but they're in an array so we can
+	// scale with the number of components.
+	for (j=1; j<nparam-1; j+=2) {
+		if (param[j+1] < 0) return -1;
+		excur[j] = 1.0;
+		exincr[j] = exp(-xincr / (double) param[j+1]);
+		a2[j] = 1 / (param[j+1] * param[j+1]);
+	}
+
+	// Compute d(y_i)/d(param_j):
 	for (i=0; i<nx; i++) {
 		y[i] = 0;
 		for (j=1; j<nparam-1; j+=2) {
@@ -797,7 +980,8 @@ int stretchedexp_array(float xincr, float param[],
 int check_ecf_params (float param[], int nparam,
 					void (*fitfunc)(float, float [], float *, float [], int))
 {
-	if (fitfunc == GCI_multiexp_lambda || fitfunc == GCI_multiexp_tau) {
+	// TODO: Correct the case handling for GCI_multiexp_tau.
+	if (fitfunc == GCI_multiexp_lambda || fitfunc == GCI_multiexp_tau || fitfunc == GCI_multiexp_tau_2) {
 		switch (nparam) {
 		case 3:
 			if (param[0] < MIN_Z ||

@@ -692,6 +692,28 @@ void GCI_multiexp_lambda(float x, float param[],
 void GCI_multiexp_tau(float x, float param[],
 		      float *y, float dy_dparam[], int nparam);
 
+/** INEFFICIENT multi-exp predefined fitting model based on lifetimes (taus).
+ *  
+ * \param[in] x The x value to evaluate the function at.
+ * \param[in] param[] Array containing the parameters to use in the evaluation.
+ * \param[out] y The value of the function at the x value.
+ * \param[out] dy_dparam Array of dy/dparam values at this point
+ * \param[in] nparam The number of parameters (may not be used if model has a fixed parameter number)
+ */
+void GCI_multiexp_tau_2(float x, float param[],
+		      float *y, float dy_dparam[], int nparam);
+
+/** Incomplete multi-exp predefined fitting model based on lifetimes (taus).
+ *  
+ * \param[in] x The x value to evaluate the function at.
+ * \param[in] param[] Array containing the parameters to use in the evaluation.
+ * \param[out] y The value of the function at the x value.
+ * \param[out] dy_dparam Array of dy/dparam values at this point
+ * \param[in] nparam The number of parameters (may not be used if model has a fixed parameter number)
+ */
+void GCI_incomplete_multiexp_tau(float x, float param[],
+		      float *y, float dy_dparam[], int nparam);
+
  /** stretched-exp predefined fitting model.
  *  
  * \param[in] x The x value to evaluate the function at.

@@ -21,6 +21,8 @@ EXPORTS
     GCI_set_restrain_limits
     GCI_multiexp_lambda
     GCI_multiexp_tau
+    GCI_multiexp_tau_2
+    GCI_incomplete_multiexp_tau
     GCI_stretchedexp
     GCI_Phasor
     GCI_Phasor_getPeriod

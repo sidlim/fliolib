@@ -1273,6 +1273,12 @@ int GCI_marquardt_compute_fn_instr(float xincr, float y[], int ndata,
 		else if (fitfunc == GCI_multiexp_tau)
 			ret = multiexp_tau_array(xincr, param, (*pfnvals),
 									 (*pdy_dparam_pure), fit_end, nparam);
+		else if (fitfunc == GCI_multiexp_tau_2)
+			ret = multiexp_tau_array_2(xincr, param, (*pfnvals),
+									 (*pdy_dparam_pure), fit_end, nparam);
+		else if (fitfunc == GCI_incomplete_multiexp_tau)
+			ret = incomplete_multiexp_tau_array(xincr, param, (*pfnvals),
+									 (*pdy_dparam_pure), fit_end, nparam);
 		else if (fitfunc == GCI_stretchedexp)
 			ret = stretchedexp_array(xincr, param, (*pfnvals),
 									 (*pdy_dparam_pure), fit_end, nparam);
@@ -1324,6 +1330,12 @@ int GCI_marquardt_compute_fn_instr(float xincr, float y[], int ndata,
 										(*pdy_dparam_conv), fit_end, nparam);
 		else if (fitfunc == GCI_multiexp_tau)
 			ret = multiexp_tau_array(xincr, param, yfit,
+									 (*pdy_dparam_conv), fit_end, nparam);
+		else if (fitfunc == GCI_multiexp_tau_2)
+			ret = multiexp_tau_array_2(xincr, param, yfit,
+									 (*pdy_dparam_conv), fit_end, nparam);
+		else if (fitfunc == GCI_incomplete_multiexp_tau)
+			ret = incomplete_multiexp_tau_array(xincr, param, yfit,
 									 (*pdy_dparam_conv), fit_end, nparam);
 		else if (fitfunc == GCI_stretchedexp)
 			ret = stretchedexp_array(xincr, param, yfit,
@@ -1709,6 +1721,12 @@ int GCI_marquardt_compute_fn_final_instr(float xincr, float y[], int ndata,
 										dy_dparam_conv, ndata, nparam);
 		else if (fitfunc == GCI_multiexp_tau)
 			ret = multiexp_tau_array(xincr, param, yfit,
+									 dy_dparam_conv, ndata, nparam);
+		else if (fitfunc == GCI_multiexp_tau_2)
+			ret = multiexp_tau_array_2(xincr, param, yfit,
+									 dy_dparam_conv, ndata, nparam);
+		else if (fitfunc == GCI_incomplete_multiexp_tau)
+			ret = incomplete_multiexp_tau_array(xincr, param, yfit,
 									 dy_dparam_conv, ndata, nparam);
 		else if (fitfunc == GCI_stretchedexp)
 			ret = stretchedexp_array(xincr, param, yfit,
