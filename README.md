@@ -6,7 +6,7 @@ $$Y(x) = H(x)\sum_{i=1}^{k}a_ie^{-\frac{x-t_0}{\tau_i}}$$\
 where $H$ is the Heaviside step function with its step at $t_0$. In order to keep the Jacobian finite everywhere, $H$ is approximated by a logistic function \
 $$S(x)=\frac{1}{1+e^{-\frac{x-t_0}{k}}}$$\
 This approximation allows the library to optimize the position of the step. The steepness of the step, $k$, is currently not modified by the library. Hence, the function that is actually fit is: \
-$$Y(x) = \left(\frac{1}{1+e^{-\frac{x-t_0}{k}}}\right\sum_{i=1}^{k}a_ie^{-\frac{x-t_0}{k}}$$
+$$Y(x) = \left(\frac{1}{1+e^{-\frac{x-t_0}{k}}}\right)\sum_{i=1}^{k}a_ie^{-\frac{x-t_0}{k}}$$
 
 `GCI_incomplete_multiexp_tau` takes an array of params in the following order: `[k, t_0, a_1, tau_1, ...]`. This fit is generally less stable and far more sensitive to seed conditions than the one provided by `GCI_multiexp_tau`. I believe this happens because $\frac{\partial Y}{\partial t_0}$ is disproportionately large around the location of the step. I'm still exploring how to fix this - perhaps this overall approach is doomed due to the instability.
 
